@@ -1,0 +1,56 @@
+.App {
+  text-align: center;
+  background: #CCC;
+  height: 96vh;
+}
+
+button.active {
+  background-color: #AAF;
+}
+
+.map {
+  height: 100%;
+}
+
+.hex.selected polygon {
+  stroke: #FFA;
+  stroke-opacity: 1;
+}
+
+.hex.focused polygon {
+  stroke: #FAA;
+  stroke-opacity: 1;
+}
+
+.hex.path polygon {
+  fill: #FFA;
+}
+
+.hex polygon {
+  stroke: #CCC;
+  fill: #AAF;
+  stroke-width: 0.2;
+  stroke-opacity: 0.3;
+  paint-order: fill;
+}
+
+.hex.player polygon {
+  fill: #AFA;
+}
+
+.hex.monster polygon {
+  fill: #FAA;
+}
+
+.hex.wall polygon {
+  fill: #CCC;
+  stroke: #111;
+}
+
+.hex.trap polygon {
+  fill: #111;
+}
+
+.hex.obstacle polygon {
+  fill: #333;
+}
