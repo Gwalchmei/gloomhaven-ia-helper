@@ -56,3 +56,7 @@ button.active {
 .hex.obstacle polygon {
   fill: #333;
 }
+
+.hex.difficult polygon {
+  fill: #703000;
+}

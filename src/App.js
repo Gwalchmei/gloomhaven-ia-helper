@@ -30,8 +30,9 @@ class App extends Component {
           <button className={ this.state.mode === 'TOGGLE_PLAYER' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_PLAYER') }>Toggle player</button>
           <button className={ this.state.mode === 'TOGGLE_MONSTER' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_MONSTER') }>Toggle monster</button>
           <button className={ this.state.mode === 'TOGGLE_WALL' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_WALL') }>Toggle wall</button>
-          <button className={ this.state.mode === 'TOGGLE_TRAP' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_TRAP') }>Toggle trap</button>
+          <button className={ this.state.mode === 'TOGGLE_TRAP' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_TRAP') }>Toggle trap/hazardous</button>
           <button className={ this.state.mode === 'TOGGLE_OBSTACLE' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_OBSTACLE') }>Toggle obstacle</button>
+          <button className={ this.state.mode === 'TOGGLE_DIFFICULT' ? 'active' : undefined } onClick={ () => store.setMode('TOGGLE_DIFFICULT') }>Toggle difficult terrain</button>
         </div>
       </div>
     );
