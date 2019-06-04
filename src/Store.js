@@ -125,10 +125,12 @@ class Store {
           });
       }
 
-      let currentId = cameFrom.get(focusedId);
-      while (currentId !== monsterId) {
-        hexes[currentId].isPath = true;
-        currentId = cameFrom.get(currentId);
+      if (cameFrom.has(focusedId)) {
+        let currentId = cameFrom.get(focusedId);
+        while (currentId !== monsterId) {
+          hexes[currentId].isPath = true;
+          currentId = cameFrom.get(currentId);
+        }
       }
     }
 
@@ -148,7 +150,7 @@ class Store {
 
   getAxialCoordinates = (cube) => ({q: cube.x, r: cube.z })
 
-  getDistanceFromCubeCoordinates = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z, b.z))
+  getDistanceFromCubeCoordinates = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z))
 
   getDistanceFromAxialCoordinates = (a, b) => this.getDistanceFromCubeCoordinates(this.getCubeCoordinates(a), this.getCubeCoordinates(b))
 
