@@ -82,68 +82,124 @@ class Store {
   processMonsterFocus = (currentValue) => {
     if (currentValue.selected && currentValue.hexes[currentValue.selected].tile instanceof Monster) {
       const monsterHex = currentValue.hexes[currentValue.selected];
-      const playerHexes = currentValue.hexes.filter(hex => hex.tile instanceof Player);
-      const visiblePlayers = playerHexes.filter(playerHex => {
-        const coordinatesBetweenPlayerAndMonster = monsterHex.coordinate.coordinatesInLineBetween(playerHex.coordinate);
-        const hexesBetweenPlayerAndMonster = this.filterHexesWithCoordinates(currentValue.hexes, coordinatesBetweenPlayerAndMonster);
-        return typeof hexesBetweenPlayerAndMonster.find(hex => hex.tile instanceof Wall) === 'undefined';
-      });
-      const distanceToPlayers = visiblePlayers.map((playerHex) => ({ hex: playerHex, distance: monsterHex.coordinate.distance(playerHex.coordinate) })).sort((a, b) => a.distance - b.distance);
+      const pathToPlayerHexes = currentValue.hexes
+        .filter(hex => hex.tile instanceof Player)
+        .map((playerHex) => ({
+          hex: playerHex,
+          path: this.getShortestPath(monsterHex, playerHex, currentValue.hexes)
+        }));
 
-      return { ...currentValue, focused: distanceToPlayers.length > 0 ? distanceToPlayers[0].hex.id : undefined };
+      if (pathToPlayerHexes.length === 0 
+        || (monsterHex.tile.range === 0 && pathToPlayerHexes.filter((pathToPlayerHex) => pathToPlayerHex.path.cost !== Infinity).length === 0)
+      ) {
+        return { ...currentValue, focused: undefined };
+      }
+
+      let availableMovementPoints = 0;
+      let exploredCompletePathSet = new Set();
+
+      while (exploredCompletePathSet.size < pathToPlayerHexes.length) {
+        const visibleInRangePlayers = pathToPlayerHexes.filter(pathToPlayerHex => {
+          const path = [...pathToPlayerHex.path.hexIds];
+          let monsterMoveToHex = monsterHex;
+          let usedMovementPoints = 0;
+          while (path.length > 0 && (usedMovementPoints + currentValue.hexes[path[0]].tile.cost) < availableMovementPoints) {
+            monsterMoveToHex = currentValue.hexes[path[0]];
+            usedMovementPoints += monsterMoveToHex.tile.cost;
+            path.shift();
+          }
+
+          if (path.length === 0) {
+            exploredCompletePathSet.add(pathToPlayerHex.hex.id);
+          }
+
+          return this.hexIsVisibleAndInRange(monsterMoveToHex, pathToPlayerHex.hex, currentValue.hexes, monsterHex.tile.range);
+        }).sort((pathToA, pathToB) => {
+          return pathToA.path.cost === pathToB.path.cost
+            ? (pathToA.hex.tile.initiative - pathToB.hex.tile.initiative)
+            : (pathToA.path.cost - pathToB.path.cost);
+        });
+
+        if (visibleInRangePlayers.length > 0) {
+          return { ...currentValue, focused: visibleInRangePlayers[0].hex.id };
+        }
+
+        availableMovementPoints++;
+      }
     }
 
     return { ...currentValue, focused: undefined };
   }
 
-  processMonsterPath = (currentValue) => {
-    const hexes = currentValue.hexes.map(hex => { hex.isPath = false; return hex; });
-    if (currentValue.selected && currentValue.focused) {
-      const monsterId = currentValue.selected;
-      const focusedId = currentValue.focused;
-      const frontier = new Map();
-      frontier.set(monsterId, 0);
-      const cameFrom = new Map();
-      const costTo = new Map();
-      cameFrom.set(monsterId, null);
-      costTo.set(monsterId, 0);
+  hexIsVisibleAndInRange = (fromHex, toHex, hexes, range) => {
+    const hexesBetween = this.filterHexesWithCoordinates(hexes, fromHex.coordinate.coordinatesInLineBetween(toHex.coordinate));
+    return typeof hexesBetween.find(hex => hex.tile instanceof Wall) === 'undefined' && fromHex.coordinate.distance(toHex.coordinate) <= range;
+  }
 
-      while (frontier.length !== 0) {
-        let currentId = null;
-        frontier.forEach((value, id) => {
-          if (currentId === null || frontier.get(id) < frontier.get(currentId)) {
-            currentId = id;
-          }
-        });
-        frontier.delete(currentId);
-        const currentHex = hexes[currentId];
+  getShortestPath = (monsterHex, playerHex, hexes) => {
+    const monsterId = monsterHex.id;
+    const playerId = playerHex.id;
+    const frontier = new Map();
+    frontier.set(monsterId, 0);
+    const cameFrom = new Map();
+    const costTo = new Map();
+    cameFrom.set(monsterId, null);
+    costTo.set(monsterId, 0);
 
-        if (typeof currentHex === 'undefined') {
-          break;
+    while (frontier.length !== 0) {
+      let currentId = null;
+      frontier.forEach((value, id) => {
+        if (currentId === null || frontier.get(id) < frontier.get(currentId)) {
+          currentId = id;
         }
+      });
+      frontier.delete(currentId);
+      const currentHex = hexes[currentId];
 
-        this.filterHexesWithCoordinates(hexes, currentHex.coordinate.neighbours)
-          .filter(hex => !(hex.tile instanceof Wall) && !(hex.tile instanceof Obstacle))
-          .forEach((neighbour) => {
-            const newCost = costTo.get(currentId) + neighbour.tile.cost;
-            if (!costTo.has(neighbour.id) || newCost < costTo.get(neighbour.id)) {
-              costTo.set(neighbour.id, newCost);
-              frontier.set(neighbour.id, newCost + hexes[focusedId].coordinate.distance(neighbour.coordinate));
-              cameFrom.set(neighbour.id, currentId);
-            }
-          });
+      if (typeof currentHex === 'undefined') {
+        break;
       }
 
+      this.filterHexesWithCoordinates(hexes, currentHex.coordinate.neighbours)
+        .filter(hex => !(hex.tile instanceof Wall) && !(hex.tile instanceof Obstacle))
+        .forEach((neighbour) => {
+          const newCost = costTo.get(currentId) + neighbour.tile.cost;
+          if (!costTo.has(neighbour.id) || newCost < costTo.get(neighbour.id)) {
+            costTo.set(neighbour.id, newCost);
+            frontier.set(neighbour.id, newCost + playerHex.coordinate.distance(neighbour.coordinate));
+            cameFrom.set(neighbour.id, currentId);
+          }
+        });
+    }
 
-      if (cameFrom.has(focusedId)) {
-        let currentId = cameFrom.get(focusedId);
-        while (currentId !== monsterId) {
-          hexes[currentId].isPath = true;
-          currentId = cameFrom.get(currentId);
-        }
+    const path = [];
+    if (cameFrom.has(playerId)) {
+      let currentId = cameFrom.get(playerId);
+      while (currentId !== monsterId) {
+        path.push(currentId);
+        currentId = cameFrom.get(currentId);
       }
     }
 
+    return { hexIds: path.reverse(), cost : costTo.has(playerId) ? costTo.get(playerId) : Infinity };
+  }
+
+  processMonsterPath = (currentValue) => {
+    const hexes = currentValue.hexes.map(hex => { hex.isPath = false; return hex; });
+    if (currentValue.selected && currentValue.focused) {
+      const monsterHex = hexes[currentValue.selected];
+      const playerHex = hexes[currentValue.focused];
+      const path = this.getShortestPath(monsterHex, playerHex, hexes).hexIds;
+      let usedMovementPoints = 0;
+      let currentHex = monsterHex;
+      while (!this.hexIsVisibleAndInRange(currentHex, playerHex, hexes, monsterHex.tile.range) && path.length > 0 && (usedMovementPoints + hexes[path[0]].tile.cost ) <= monsterHex.tile.movement) {
+        hexes[path[0]].isPath = true;
+        currentHex = hexes[path[0]];
+        usedMovementPoints += currentHex.tile.cost;
+        path.shift();
+      }
+    }
+    
     return { ...currentValue, hexes };
   }
 

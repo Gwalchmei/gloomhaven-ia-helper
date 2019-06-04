@@ -3,8 +3,8 @@ import Tile from './tile';
 export default class Monster extends Tile {
   constructor(movement, range, flying) {
     super();
-    this._movement = movement;
-    this._range = range;
+    this._movement = 3;
+    this._range = 2;
     this._flying = flying;
   }
 
